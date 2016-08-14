@@ -1,0 +1,979 @@
+#!/bin/bash
+#/// Organizador de Sardach 1.1.0 ///#
+
+
+clear
+touch .pts
+touch .total
+touch .totaldh
+touch .totald
+touch .tareas
+touch .config
+confcomp=`wc -l < .config`
+
+# Colores y Estilos #
+rojo='\e[0;31m'
+ROJO='\e[1;31m'
+azul='\e[0;34m'
+AZUL='\e[1;34m'
+cyan='\e[0;36m'
+CYAN='\e[1;36m'
+verde='\e[0;32m'
+VERDE='\e[1;32m'
+amarillo='\e[0;33m'
+AMARILLO='\e[1;33m'
+
+negritas='\e[1m'
+claro='\e[2m'
+subrayado='\e[4m'
+parpadeo='\e[5m'
+
+normal='\e[0m'
+
+# Ayudas #
+
+function ayuda-dinero {
+cat << aiua
+Opciones par Dinero:
+
+ ncat [Numero de Importancia] [Nombre de la Categoria] , para agregar una nueva categoria.
+ ecat [Número de la Categoria] , para eliminar una categoria.
+ mcat [Número de la Categoria] [Numero de Importancia] [Nuevo Nombre], para modificar una categoria.
+ cats, para obtener una lista de las categorias con su respectivo numero identificador.
+
+ cat [Número de Categoria], para mostrar la categoria y sus gastos de forma aislada.
+
+ agg [Número de Categoria] [Nombre del Gasto], para agregar un nuevo gasto.
+ eliminar [Número de Categoria] [Número del Gasto], para eliminar un gasto.
+ hecho [Número de Categoria] [Número de Gasto] [Cantidad Gastada], para dar por completado un gasto.
+ mod [Número de Categoria] [Número de Gasto] [Nuevo Nombre], para modificar un gasto.
+
+ dinero [Cantidad], para agregar mas dinero al total.
+
+ ayuda, para mostrar este texto.
+
+ regresar, para regresar el menú principal.
+
+Ejemplos:
+ ~org: ncat 5 
+ ~org: agg 1 lapiz
+ ~org: hecho 1 1 5
+
+Puntos:
+ Se suman puntos positivos por cada gasto completado dentro de su rango máximo.
+ Se suman puntos negativos por cada gasto completado fuera de su rango máximo.
+
+Importancia:
+ Se puede definir cada categoria con un numero de importancia del 0 al 5, siendo
+ 5 la mas importante y 0 insignificante.
+
+ El dinero total se reparte dinamicamente en cada categoria según su importancia.
+
+Notas:
+ Los nombres de categorias y gastos deben estar formados de una sola frase con maximo
+ siete caracteres.
+
+aiua
+}
+
+function ayuda-lista {
+cat << prim
+Opciones para Tareas:
+
+ ncat [Nombre de la Categoria], para agregar una nueva categoria.
+ ecat [Número de la Categoria], para eliminar una categoria.
+ mcat [Número de la Categoria] [Nuevo Nombre], para modificar una cateogira.
+ cats, para obtener una lista de las categorias con su respectivo numero identificador.
+
+ cat [Número de Categoria], para mostrar la categoria y sus tareas de forma aislada.
+
+ agg [Número de Categoria] [Nombre de la Tarea], para agregar una nueva tarea.
+ eliminar [Número de Categoria] [Número de Tarea], para eliminar una tarea.
+ hecho [Número de Categoria] [Número de Tarea], para dar por completada una tarea.
+ mod [Número de Categoria] [Número de Tarea] [Nuevo Nombre], para modificar una tarea.
+ ayuda, para mostrar este texto.
+
+ regresar, para regresar el menú principal.
+
+Ejemplos:
+ ~org: agg 4 Comprar tabaco
+ ~org: eliminar 2 3
+ ~org: mod 2 10 Limpiar pipa
+
+Puntos:
+ Se suman puntos positivos por cada tarea completada
+ Se suman puntos negativos por cada tarea eliminada
+
+prim
+
+}
+
+# Notificaciones / Mensajes *
+
+function notificacionb {
+echo -e "${verde} $msj ${normal}"
+msj=""
+}
+function notificacionm {
+echo -e "${rojo} $msjm ${normal}"
+msjm=""
+}
+# Lista de Tareas #
+
+function lista {
+clear
+cabecera
+
+ls .cat-* > .catnum
+catnum=`wc -l < .catnum`
+clear
+cabecera
+if [ "$catnum" -ge "1" ]; then
+notificacionb
+notificacionm
+cat .cat-*
+modcomp=`cat .cat-*` #sirve para comprobar si se modifico la wea, sin pedos raros. Rudimentario.
+else
+clear
+cabecera
+cat << prim
+
+	Parece que aún no agregas categorias ni tareas.
+
+Escribe «ayuda» para obtener información.
+
+prim
+fi
+prompt="~org: "
+read -p $prompt lprompt
+
+args=($lprompt)
+cnt1=`echo "$lprompt" | wc -w`
+uno="1"
+cnt=$(($cnt1 - $uno))
+
+#Categoria x Categoria
+if [ "${args[0]}" = "cat" ]; then
+clear
+cabecera
+if [ "${args[1]}" -le "9" ]; then
+cat .cat-0${args[1]}
+else
+cat .cat-${args[1]}
+fi
+echo ""
+echo "Pulsa Enter para volvera  todas las categorias."
+read
+fi
+#Nueva Tarea
+if [ "${args[0]}" = "agg" ]; then
+tarea=""
+msj="Tarea agregada correctamente."
+for ((i=2;i<=$cnt;i+=1)); do
+tarea="$tarea ${args[$i]}"
+done
+if [ "${args[1]}" -le "9" ]; then
+args[1]="0${args[1]}"
+fi
+#nt=`wc -l < .cat-${args[1]}`
+echo $tarea >> .cat-${args[1]}
+modcomp2=`cat .cat-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msjm="Algo salio mal, verifica que escribiste."
+else
+tta=`head -1 .total`
+tta=$(($tta + 1))
+echo $tta > .total
+ta=`head -1 .tareas`
+ta=$(($ta + 1))
+echo $ta > .tareas
+fi
+fi
+
+#Eliminar Tarea
+if [ "${args[0]}" = "eliminar" ]; then
+linea=$((${args[2]} + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea d" .cat-0${args[1]}
+else
+sed -i "$linea d" .cat-${args[1]}
+fi
+modcomp2=`cat .cat-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+else
+msjm="La tarea se elimino correctamente >:c"
+tta=`head -1 .total`
+tta=$(($tta - 1))
+echo $tta > .total
+ta=`head -1 .tareas`
+ta=$(($ta - 1))
+echo $ta > .tareas
+pts=`head -1 .pts`
+pts=$(($pts - 100))
+echo $pts > .pts
+fi
+fi
+
+#Hecho
+if [ "${args[0]}" = "hecho" ]; then
+linea=$((${args[2]} + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea d" .cat-0${args[1]}
+else
+sed -i "$linea d" .cat-${args[1]}
+fi
+modcomp2=`cat .cat-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+else
+msj="¡Esta hecho! :)"
+pts=`head -1 .pts`
+pts=$(($pts + 10))
+echo $pts > .pts
+ta=`head -1 .tareas`
+ta=$(($ta - 1))
+echo $ta > .tareas
+fi
+fi
+
+#Modificar Tarea
+if [ "${args[0]}" = "mod" ]; then
+msj="La tarea fue modificada exitosamente c:"
+nuevo=""
+for ((i=3;i<=$cnt;i+=1)); do
+nuevo="$nuevo ${args[$i]}"
+done
+linea1=$((${args[2]} + $uno))
+linea2=$(($linea1 + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea1 i $nuevo" .cat-0${args[1]}
+sed -i "$linea2 d" .cat-0${args[1]}
+else
+sed -i "$1inea1 i $nuevo" .cat-${args[1]}
+sed -i "$linea2 d" .cat-${args[1]}
+fi
+modcomp2=`cat .cat-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+fi
+fi
+
+
+#Nueva Categoria
+if [ "${args[0]}" = "ncat" ]; then
+categoria=""
+for ((i=1;i<=$cnt;i+=1)); do
+categoria="$categoria ${args[$i]}"
+done
+catnum2=`wc -l < .categorias`
+catnum1=$(($catnum2 + $uno))
+if [ "$catnum1" -le "9" ]; then
+echo "0$catnum1 -$categoria" >> .categorias
+else
+echo "$catnum1 -$categoria" >> .categorias
+fi
+catnum=`wc -l < .categorias`
+if [ "$catnum" -le "9" ]; then
+echo -e "// ${negritas}$categoria ${normal} //" > .cat-0$catnum
+else
+echo -e "// ${negritas}$categoria ${normal} //" > .cat-$catnum
+fi
+reorg-cat
+msj="La categoría $categoria fue creada con éxito. :3"
+fi
+
+#Eliminar categoria
+if [ "${args[0]}" = "ecat" ]; then
+msj="La categoria fue eliminada con éxito >:)"
+comp0=`wc -l < .cat-0${args[1]}`
+comp1=`wc -l < .cat-${args[1]}`
+if [ "$comp0" -ge "2" ]; then
+msj=""
+msjm="Debes eliminar las tareas primero >:C"
+
+else if [ "$comp1" -ge "2" ]; then
+msj=""
+masjm="Debes eliminar las tareas primero >:C"
+
+else
+if [ "${args[1]}" -le "9" ]; then
+rm .cat-0${args[1]}
+reorg-cat
+else if [ "${args[1]}" -ge "10" ]; then
+rm .cat-${args[1]}
+reorg-cat
+else
+msj=""
+msjm="Numero invalido :c"
+fi
+fi
+fi
+fi
+fi
+#Modificar Categoria
+if [ "${args[0]}" = "mcat" ]; then
+msj="La categoria fue modificada exitosamente c:"
+nuevo=""
+for ((i=2;i<=$cnt;i+=1)); do
+nuevo="$nuevo ${args[$i]}"
+done
+if [ "${args[1]}" -le "9" ]; then
+
+nuevo=`echo -e "// ${negritas}$nuevo ${normal} //"`
+
+sed -i "1i $nuevo" .cat-0${args[1]}
+sed -i '2d' .cat-0${args[1]}
+else
+sed -i "1i $nuevo" .cat-${args[1]}
+sed -i '2d' .cat-${args[1]}
+fi
+modcomp2=`cat .cat-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+fi
+fi
+
+#Catear Categorias
+if [ "${args[0]}" = "cats" ]; then
+reorg-cat
+clear
+cabecera
+cat .categorias
+echo ""
+echo "Presiona Enter para volver"
+read
+lista
+fi
+
+if [ "${args[0]}" = "ayuda" ]; then
+clear
+cabecera
+ayuda-lista
+echo ""
+echo "Presiona Enter para volver"
+read
+fi
+
+if [ "${args[0]}" = "regresar" ]; then
+main
+fi
+if [ "${args[0]}" = "" ]; then
+msj="Escribe ayuda y pulsa enter."
+msjm="Verifica tus argumentos."
+fi
+lista
+}
+
+# Dinero #
+
+function dinero {
+clear
+cabecera
+ls .cdin-* > .catnum
+catnum=`wc -l < .catnum`
+clear
+cabecera
+if [ "$catnum" -ge "1" ]; then
+notificacionb
+notificacionm
+paste .cdin-* && paste .din-*
+modcomp=`cat .cdin-*` #sirve para comprobar si se modifico la wea, sin pedos raros. Rudimentario.
+else
+clear
+cabecera
+touch .totald
+cat << prim
+
+        Parece que aún no agregas categorias ni gastos.
+
+Escribe «ayuda» para obtener información.
+
+prim
+fi
+prompt="~org: "
+read -p $prompt lprompt
+
+args=($lprompt)
+cnt1=`echo "$lprompt" | wc -w`
+uno="1"
+cnt=$(($cnt1 - $uno))
+
+#Dinero-dinero
+if [ "${args[0]}" = "dinero" ]; then
+if [ "${args[1]}" -ge "0" ]; then
+total=`head -1 .totald`
+total=$(( $total + ${args[1]} ))
+echo $total > .totald
+totalh=`head -1 .totaldh`
+totalh=$(( $totalh + ${args[1]} ))
+echo $totalh > .totaldh
+
+din-din
+
+else
+msjm="Solo numeros mayores a 0."
+fi
+fi
+
+#Categoria x Categoria-Dinero
+if [ "${args[0]}" = "cat" ]; then
+clear
+cabecera
+if [ "${args[1]}" -le "9" ]; then
+cat .cdin-0${args[1]}
+else
+cat .cdin-${args[1]}
+fi
+echo ""
+echo "Pulsa Enter para volver a todas las categorias."
+read
+fi
+
+#Nuevo Gasto
+if [ "${args[0]}" = "agg" ]; then
+gasto=""
+msj="Gasto agregado correctamente."
+for ((i=2;i<=$cnt;i+=1)); do
+gasto="$gasto ${args[$i]}"
+done
+max7="${#gasto}"
+if [ "$max7" -le "7" ]; then
+if [ "${args[1]}" -le "9" ]; then
+args[1]="0${args[1]}"
+fi
+#nt=`wc -l < .cat-${args[1]}`
+echo $gasto >> .cdin-${args[1]}
+modcomp2=`cat .cdin-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msjm="Algo salio mal, verifica que escribiste."
+fi
+else
+msj=""
+msjm="Error, maximo 7 caracteres."
+fi
+fi
+
+#Eliminar Gasto
+if [ "${args[0]}" = "eliminar" ]; then
+linea=$((${args[2]} + $uno + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea d" .cdin-0${args[1]}
+else
+sed -i "$linea d" .cdin-${args[1]}
+fi
+modcomp2=`cat .cdin-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+else
+msj="El gasto se elimino correctamente."
+fi
+fi
+
+#Hecho-dinero
+if [ "${args[0]}" = "hecho" ]; then
+linea=$((${args[2]} + $uno + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea d" .cdin-0${args[1]}
+dincat=`head -1 .din-0${args[1]}`
+dincat=${dincat:1}
+else
+sed -i "$linea d" .cdin-${args[1]}
+dincat=`head -1 .din-${args[1]}`
+dincat=${dincat:1}
+fi
+
+if [ "${args[3]}" -le  "$dincat" ]; then
+msj="¡Esta hecho! :)"
+pts=`head -1 .pts`
+pts=$(($pts + 10))
+echo $pts > .pts
+total=`head -1 .totald`
+total=$(( $total - ${args[3]} ))
+echo $total > .totald
+din-din
+else
+msj="¡Esta hecho! "
+msjm="¡Has gastado mucho! :C"
+pts=`head -1 .pts`
+pts=$(($pts - 100))
+echo $pts > .pts
+total=`head -1 .totald`
+total=$(( $total - ${args[3]} ))
+echo $total > .totald
+din-din
+fi
+
+modcomp2=`cat .cdin-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+fi
+fi
+
+#Modificar Gasto
+if [ "${args[0]}" = "mod" ]; then
+msj="EL gasto fue modificada exitosamente c:"
+nuevo=""
+for ((i=3;i<=$cnt;i+=1)); do
+nuevo="$nuevo ${args[$i]}"
+done
+max7="${#nuevo}"
+if [ "$max7" -le "7" ]; then
+linea1=$((${args[2]} + $uno + $uno))
+linea2=$(($linea1 + $uno))
+if [ "${args[1]}" -le "9" ]; then
+sed -i "$linea1 i $nuevo" .cdin-0${args[1]}
+sed -i "$linea2 d" .cdin-0${args[1]}
+else
+sed -i "$1inea1 i $nuevo" .cdin-${args[1]}
+sed -i "$linea2 d" .cdin-${args[1]}
+fi
+modcomp2=`cat .cdin-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+fi
+else
+msj=""
+msjm="Error, maximo 7 caracteres."
+fi
+fi
+
+
+#Nueva Categoria-dinero
+if [ "${args[0]}" = "ncat" ]; then
+if [ "${args[1]}" -le "5" ] && [ "${args[1]}" -ge "0" ]; then
+unset categoria
+imp="${args[1]}"
+for ((i=2;i<=$cnt;i+=1)); do
+categoria="$categoria ${args[$i]}"
+done
+max7="${#categoria}"
+if [ "$max7" -le "7" ]; then
+categoria=${categoria:1:8}
+ls .cdin-* > .ncatnum
+catnum=`wc -l < .ncatnum`
+catnum=$(($catnum + $uno))
+#if [ "$catnum1" -le "9" ]; then
+#echo "0$catnum1 -$categoria I:$imp" >> .catdin
+#else
+#echo "$catnum1 -$categoria I:$imp" >> .catdin
+#fi
+
+if [ "$catnum" -le "9" ]; then
+echo -e "I:$imp\n${negritas}$categoria:${normal}" > .cdin-0$catnum
+touch .din-0$catnum
+else
+echo -e "I:$imp \n${negritas}$categoria:${normal} " > .cdin-$catnum
+touch .din-$catnum
+fi
+reorg-cdin
+msj="La categoría $categoria fue creada con éxito. :3"
+else
+msj=""
+msjm="Error, maximo 7 caracteres."
+fi
+else
+msj=""
+msjm="La importancia debe ser entre 0 y 5."
+fi
+fi
+
+#Eliminar categoria-dinero
+if [ "${args[0]}" = "ecat" ]; then
+msj="La categoria fue eliminada con éxito >:)"
+comp0=`wc -l < .cdin-0${args[1]}`
+comp1=`wc -l < .cdin-${args[1]}`
+if [ "$comp0" -ge "3" ]; then
+msj=""
+msjm="Debes eliminar o completar los gastos primero >:C"
+
+else if [ "$comp1" -ge "3" ]; then
+msj=""
+masjm="Debes eliminar o completar los gastos primero >:C"
+else
+if [ "${args[1]}" -le "9" ]; then
+rm .cdin-0${args[1]}
+rm .din-0${args[1]}
+reorg-cdin
+else if [ "${args[1]}" -ge "10" ]; then
+rm .cdin-${args[1]}
+rm .din-${args[1]}
+reorg-cdin
+else
+msj=""
+msjm="Numero invalido :c"
+fi
+fi
+fi
+fi
+fi
+
+#Modificar Categoria-dinero
+if [ "${args[0]}" = "mcat" ]; then
+if [ "${args[1]}" -le "5" ] && [ "${args[1]}" -ge "0" ]; then
+msj="La categoria fue modificada exitosamente c:"
+unset nuevo
+imp="${args[2]}"
+for ((i=3;i<=$cnt;i+=1)); do
+nuevo="$nuevo ${args[$i]}"
+done
+nuevo=${nuevo:1:8}
+max7="${#nuevo}"
+if [ "$max7" -le "7" ]; then
+#nuevo=`echo -e "I:$imp\n${negritas}$nuevo:${normal}"`
+if [ "${args[1]}" -le "9" ]; then
+cat .cdin-0${args[1]} > .cdin0
+echo -e "I:$imp\n${negritas}$nuevo:${normal}" > .cdin-0${args[1]}
+cat .cdin0 >> .cdin-0${args[1]}
+#sed -i "1i $nuevo" .cdin-0${args[1]}
+sed -i '3d' .cdin-0${args[1]}
+sed -i '3d' .cdin-0${args[1]}
+din-din
+else
+cat .cdin-${args[1]} > .cdin0
+echo -e "I:$imp\n${negritas}$nuevo:${normal}" > .cdin-${args[1]}
+cat .cdin0 >> .cdin-${args[1]} 
+#sed -i "1i $nuevo" .cdin-${args[1]}
+sed -i '3d' .cdin-${args[1]}
+sed -i '3d' .cdin-${args[1]}
+din-din
+fi
+modcomp2=`cat .cdin-*`
+if [ "$modcomp" = "$modcomp2" ]; then
+msj=""
+msjm="Algo salio mal, verifica que escribiste."
+fi
+else
+msj=""
+msjm="Error, maximo 7 caracteres."
+fi
+else
+msj=""
+msjm="La importancia debe ser entre 0 y 5."
+fi
+fi
+
+#Catear Categorias-dinero
+if [ "${args[0]}" = "cats" ]; then
+clear
+cabecera
+cat .catdin
+echo ""
+echo "Presiona Enter para volver"
+read
+dinero
+fi
+
+if [ "${args[0]}" = "ayuda" ]; then
+clear
+cabecera
+ayuda-dinero
+echo ""
+echo "Presiona Enter para volver"
+read
+fi
+
+if [ "${args[0]}" = "regresar" ]; then
+main
+fi
+if [ "${args[0]}" = "" ]; then
+msj="Escribe ayuda y pulsa enter."
+msjm="Verifica tus argumentos."
+fi
+dinero
+}
+
+# Reorganizadores #
+function reorg-cdin {
+rm .catdin
+ls .cdin-* > .reorg # se hace 1 lista con las categorias
+cant=`wc -l < .reorg` # se cuentan las categorias
+ls .din-* > .reorg2
+for ((i=1;i<=$cant;i+=1)); do
+mov=`sed -n "$i"p .reorg`
+mov2=`sed -n "$i"p .reorg2`
+#echo $cant
+#echo $mov $mov2
+if [ "$i" -le "9" ]; then
+mv $mov .cdin-0$i
+mv $mov2 .din-0$i
+head -2 +1 .cdin-0$i >> .catdin
+else
+mv $mov .cdin-$i
+mv $mov2 .din-$i
+head -2 +1 .cdin-$i >> .catdin
+fi
+done
+sed -e s/.cdin-//g -i .catdin
+din-din
+}
+
+function reorg-cat {
+rm .categorias
+ls .cat-* > .reorg # se hace 1 lista con las categorias
+cant=`wc -l < .reorg` # se cuentan las categorias
+for ((i=1;i<=$cant;i+=1)); do
+mov=`sed -n "$i"p .reorg`
+#echo $mov
+if [ "$i" -le "9" ]; then
+mv $mov .cat-0$i
+head -1 +1 .cat-0$i >> .categorias
+else
+mv $mov .cat-$i
+head -1 +1 .cat-$i >> .categorias
+fi
+done
+sed -e s/.cat-//g -i .categorias
+}
+
+# Dinámica de Dinero #
+
+function din-din {
+ls .din* > .caca #cantidad de categorias
+
+caca=`wc -w < .caca`
+if  [ "$caca" -ge "1" ]; then
+total2=$total
+divi=1
+#div=1
+
+for ((i=1;i<=$caca;i+=1)); do
+if [ "$i" -le "9" ]; then
+echo "$""0" > .din-0$i
+else
+echo "$""0" > .din-$i
+fi
+done
+
+while [ $divi -ge "1" ]
+do
+div=$(( $total2 / $caca ))
+
+for ((i=1;i<=$caca;i+=1)); do
+
+
+if [ "$i" -le "9" ]; then
+imp=`head -1 .cdin-0$i`
+else
+imp=`head -1 .cdin-0$i`
+fi
+
+imp=${imp:2}
+
+if [ "$imp" = "0" ]; then
+divi=$(( $div * 5 ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$imp" = "1" ]; then
+divi=$(( $div * 15 ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$imp" = "2" ]; then
+divi=$(( $div * 30 ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$imp" = "3" ]; then
+divi=$(( $div * 50 ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$imp" = "4" ]; then
+divi=$(( $div * 75 ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$imp" = "5" ]; then
+divi=$(( $div * 100  ))
+divi=$(( $divi / 100 ))
+fi
+
+if [ "$i" -le "9" ]; then
+dincat=`head -1 .din-0$i`
+dincat=${dincat:1}
+dincat=$(( $dincat + $divi ))
+echo  "$"$dincat > .din-0$i
+else
+dincat=`head -1 .din-$i`
+dincat=${dincat:1}
+dincat=$(( $dincat + $divi ))
+echo "$"$dincat > .din-$i
+fi
+total2=$(( $total2 - $divi ))
+#echo $div $divi $total2 $dincat
+done
+done
+fi
+}
+
+# Opciones #
+
+function opciones {
+cpdd='Desactivar Palabra del dia'
+cpdd2="Activar Palabra del dia"
+cnom="Cambiar Nombre"
+edat="ELIMINAR DATOS"
+regr="Regresar"
+clear
+cabecera
+cat << opc
+
+Elige una opcion:
+1.- $cpdd
+2.- $cnom
+3.- $edat
+4.- $regr
+5.- $cpdd2
+opc
+prompt="~org: "
+
+read -p $prompt opc
+
+if [ "$opc" = "1" ]; then
+sed -i "2 d" .config
+echo "0" >> .config
+main
+else if [ "$opc" = "2" ]; then
+clear
+cabecera
+prompt="Nombre: "
+read -p $prompt nombre
+sed -i "1 i $nombre" .config
+sed -i "2 d" .config
+main
+else if [ "$opc" = "3" ]; then
+clear
+echo "Esta opción borrara todos los archivos ocultos que se encuentren"
+echo "en la carpeta del Script. Si quieres cancelar oprime Ctrl-C,   "
+echo "si deseas continuar presiona Enter"
+read
+rm -f .*
+exit
+
+else if [ "$opc" = "4" ]; then
+main
+
+else if [ "$opc" = "5" ]; then
+sed -i "2 d" .config
+echo "1" >> .config
+main
+fi
+fi
+fi
+fi
+fi
+}
+
+
+# Palabra del Dia
+function pdd {
+pddc=`tail -1 .config`
+if [ "$pddc" = "1" ]; then
+elinks -no-references -no-numbering -dump http://dle.rae.es/srv/wotd > .wotd.txt
+wotd=`sed 's/<[^>]\+>//g' .wotd.txt`
+cat <<-pdd
+Palabra del dia:$wotd
+pdd
+fi
+}
+
+# Cabecera #
+
+function cabecera {
+ta=`head -1 .tareas`
+tta=`head -1 .total`
+pts=`head -1 .pts`
+nombre=`head -1 .config`
+
+total=`head -1 .totald`
+totalh=`head -1 .totaldh`
+if [ "$total" = "" ]; then
+total=0
+totalh=0
+fi
+
+totales='$'"$total/"'$'"$totalh"
+echo -e "\e[37;40m Organizador de $nombre 1.1.0 - Puntos: $pts | Dinero: $totales | Tareas: $ta/$tta \e[0m"
+}
+
+# Menú #
+
+function main {
+clear
+PS3="~org: " # prompt
+cabecera
+msj=$(pdd)
+notificacionb
+if [ "$total" -le "-1" ]; then
+msjm="¡Has gastado muy mal, estas en numeros rojos! >:CCCCC"
+notificacionm
+fi
+cat << m
+
+Elige a donde quieres ir:
+
+m
+           select op in Tareas Dinero Opciones Salir; do
+
+               if [ "$op" = "Tareas" ]; then
+                clear
+                lista
+		break
+               elif [ "$op" = "Dinero" ]; then
+                clear
+		dinero
+		break
+	       elif [ "$op" = "Opciones" ]; then
+		clear
+		opciones
+		break
+	       elif [ "$op" = "Salir" ]; then
+		clear
+		echo "¡Adiós! :3"
+		exit
+               else
+                echo Opción invalida.
+               fi
+	done
+}
+
+# Primer Inicio #
+if [ "$confcomp" == "0" ]; then
+total="0"
+clear
+cabecera
+cat << m
+
+ Las funciones de este script pretenden brindar una solución a mis necesidades personales. 
+ Usalo si te gusta o arreglalo tú mismo si no es así.
+
+ Lee los textos de ayuda con cuidado, es posible dañar el funcionamiento del programa 
+ si se usa una  sintaxis incorrecta.
+
+ En esta versión solo es posible trabajar con numeros enteros. 
+
+m
+echo "Pulsa enter para continuar".
+read
+clear
+cabecera
+echo ""
+echo "¡Hola, bienvenido!"
+echo "Escribe tu nombre."
+echo ""
+prompt="Nombre: "
+read -p $prompt nombre
+echo $nombre > .config
+echo "1" >> .config
+fi
+
+main
