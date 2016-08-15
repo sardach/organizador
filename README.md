@@ -25,3 +25,5 @@ No hay paquete de instalación, copia org y la carpeta organizador en /usr/bin p
 > $ org
 
 El archivo ejecutable «org» sirve únicamente para ejecutar el script principal ubicado en la carpeta «organizador». No copie el script principal dentro de /usr/bin, use el script tal y como se ofrece aquí (ejecutandolo desde «org»).
+
+Se requiere el paquete "elinks" para usar la palabra del dia.
