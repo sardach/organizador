@@ -1,5 +1,5 @@
 #!/bin/bash
-#/// Organizador de Sardach 1.1.0 ///#
+#/// Organizador de Sardach 1.2.0 ///#
 
 
 clear
@@ -55,7 +55,7 @@ Opciones par Dinero:
  regresar, para regresar el menú principal.
 
 Ejemplos:
- ~org: ncat 5 
+ ~org: ncat 5
  ~org: agg 1 lapiz
  ~org: hecho 1 1 5
 
@@ -90,7 +90,9 @@ Opciones para Tareas:
  agg [Número de Categoria] [Nombre de la Tarea], para agregar una nueva tarea.
  eliminar [Número de Categoria] [Número de Tarea], para eliminar una tarea.
  hecho [Número de Categoria] [Número de Tarea], para dar por completada una tarea.
+ hecho-r [Número de Cateoria] [Número de Tarea], para dar por completa una tarea sin eliminarla.
  mod [Número de Categoria] [Número de Tarea] [Nuevo Nombre], para modificar una tarea.
+ historial, para mostrar las tareas completadas.
  ayuda, para mostrar este texto.
 
  regresar, para regresar el menú principal.
@@ -144,7 +146,7 @@ Escribe «ayuda» para obtener información.
 
 prim
 fi
-prompt="~org: "
+prompt="~org: "
 read -p $prompt lprompt
 
 args=($lprompt)
@@ -236,8 +238,30 @@ echo $pts > .pts
 ta=`head -1 .tareas`
 ta=$(($ta - 1))
 echo $ta > .tareas
+if [ "${args[1]}" -le "9" ]; then
+hist=`awk "NR==$linea" .cat-0${args[1]}`
+else
+hist=`awk "NR==$linea" .cat-${args[1]}`
+fi
+echo $hist >> .historial
 fi
 fi
+
+#Hecho-R
+if [ "${args[0]}" = "hecho-r" ]; then
+msj="¡Esta hecho! :)"
+pts=`head -1 .pts`
+pts=$(($pts + 10))
+echo $pts > .pts
+linea=$((${args[2]} + $uno))
+if [ "${args[1]}" -le "9" ]; then
+hist=`awk "NR==$linea" .cat-0${args[1]}`
+else
+hist=`awk "NR==$linea" .cat-${args[1]}`
+fi
+echo $hist >> .historial
+fi
+
 
 #Modificar Tarea
 if [ "${args[0]}" = "mod" ]; then
@@ -350,6 +374,18 @@ read
 lista
 fi
 
+#Catear  Historial de completadas
+if [ "${args[0]}" = "historial" ]; then
+clear
+cabecera
+cat .historial
+echo ""
+echo "Presiona Enter para volver"
+read
+lista
+fi
+
+
 if [ "${args[0]}" = "ayuda" ]; then
 clear
 cabecera
@@ -395,7 +431,7 @@ Escribe «ayuda» para obtener información.
 
 prim
 fi
-prompt="~org: "
+prompt="~org: "
 read -p $prompt lprompt
 
 args=($lprompt)
@@ -834,7 +870,7 @@ Elige una opcion:
 4.- $regr
 5.- $cpdd2
 opc
-prompt="~org: "
+prompt="~org: "
 
 read -p $prompt opc
 
@@ -845,7 +881,7 @@ main
 else if [ "$opc" = "2" ]; then
 clear
 cabecera
-prompt="Nombre: "
+prompt="Nombre: "
 read -p $prompt nombre
 sed -i "1 i $nombre" .config
 sed -i "2 d" .config
@@ -902,7 +938,7 @@ totalh=0
 fi
 
 totales='$'"$total/"'$'"$totalh"
-echo -e "\e[37;40m Organizador de $nombre 1.1.0 - Puntos: $pts | Dinero: $totales | Tareas: $ta/$tta \e[0m"
+echo -e "\e[37;40m Organizador de $nombre 1.2.0 - Puntos: $pts | Dinero: $totales | Tareas: $ta/$tta \e[0m"
 }
 
 # Menú #
@@ -970,7 +1006,7 @@ echo ""
 echo "¡Hola, bienvenido!"
 echo "Escribe tu nombre."
 echo ""
-prompt="Nombre: "
+prompt="Nombre: "
 read -p $prompt nombre
 echo $nombre > .config
 echo "1" >> .config
