@@ -9,6 +9,8 @@ Funciones:
 * Añadir tareas.
 * Añadir gastos.
 * Administrar las categorias, tareas y gastos (editar, modificar, completar y eliminar) facilmente.
+* Historial de tareas.
+* Tareas recurrentes. 
 * Repartir dinero a las diferentes categorias de gastos de manera dinamica según su importancia.
 * Sistema de Puntos
 * Sistema de Importancia
