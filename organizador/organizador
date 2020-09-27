@@ -854,8 +854,8 @@ fi
 # Opciones #
 
 function opciones {
-cpdd='Desactivar Palabra del dia'
-cpdd2="Activar Palabra del dia"
+cpdd='Desactivar Palabra aleatoria'
+cpdd2="Activar Palabra aleatoria"
 cnom="Cambiar Nombre"
 edat="ELIMINAR DATOS"
 regr="Regresar"
@@ -910,14 +910,20 @@ fi
 }
 
 
-# Palabra del Dia
+# Palabra Aleatoria
 function pdd {
 pddc=`tail -1 .config`
 if [ "$pddc" = "1" ]; then
-elinks -no-references -no-numbering -dump http://dle.rae.es/srv/wotd > .wotd.txt
-wotd=`sed 's/<[^>]\+>//g' .wotd.txt`
+curl -s -L 'https://dle.rae.es/?m=random' -H 'Cookie: cookies_rae=aceptada; TS017111a7_77=1936_fb05b6f7981a8b58_rsb_0_rs_%2Fsrv%2Ffetch_rs_1_rs_0; __atuvc=0%7C14%2C0%7C15%2C0%7C16%2C0%7C17%2C1%7C18; __atuvs=590c4926dc3eb1ad000; TS017111a7=017ccc203ce26fac3631d8c63f9c6834ecdab4355207b329951c75a52fa7e965fd8cbdc4ad; _ga=GA1.2.1725722401.1468220521; _gid=GA1.2.170936195.1493977402' -H 'Origin: http://dle.rae.es' -H 'Accept-Encoding: gzip, deflate' -H 'Accept-Language: es,en;q=0.8' -H 'Upgrade-Insecure-Requests: 1' -H 'User-Agent: Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Cache-Control: max-age=0' -H 'Referer: https://dle.rae.es/?m=random' -H 'Connection: keep-alive' --data 'TS017111a7_id=3&TS017111a7_cr=c5047f917d2a254b004b5e10a1aff4c8%3Arrrp%3AFyuzkN13%3A1711472717&TS017111a7_76=0&TS017111a7_86=0&TS017111a7_md=1&TS017111a7_rf=0&TS017111a7_ct=0&TS017111a7_pd=0' --compressed > .res.txt
+elinks -no-numbering -dump  .res.txt > .random.txt
+sed -e '1,/Consultar ]/ d' .random.txt > .pa.txt
+sed '/2./,$d' .pa.txt > .pb.txt
+sed '/Conjugación de/,$d' .pb.txt > .pc.txt 
+wotd=`sed '/Real Academia/,$d' .pc.txt`
 cat <<-pdd
-Palabra del dia:$wotd
+Palabra Aleatoria:$wotd
+
+
 pdd
 fi
 }
@@ -950,7 +956,7 @@ cabecera
 msj=$(pdd)
 notificacionb
 if [ "$total" -le "-1" ]; then
-msjm="¡Has gastado muy mal, estas en numeros rojos! >:CCCCC"
+msjm="\n¡Has gastado muy mal, estas en numeros rojos! >:CCCCC"
 notificacionm
 fi
 cat << m
