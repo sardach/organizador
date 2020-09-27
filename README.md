@@ -2,6 +2,8 @@ organizador-bash
 =======
 Organizador de Tareas y Dinero para consola, escrito enteramente en BASH.
 
+**ATENCIÓN: Proyecto personal, hecho con los pies.**
+
 Funciones:
 
 * Crear categorias de tareas.
@@ -20,7 +22,7 @@ Funciones:
 ### Instalación
 No hay paquete de instalación, copia org y la carpeta organizador en /usr/bin para poder usar el script.
 
-> $ sudo chmod 777 org organizador/organizador
+> $ sudo chmod 755 org organizador/organizador
 
 > $ sudo mv organizador org /usr/bin
 
